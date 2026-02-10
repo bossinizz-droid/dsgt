@@ -1,7 +1,7 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+// Use process.env.API_KEY directly as per guidelines.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const analyzeItem = async (imageB64: string, textDescription: string) => {
   const model = 'gemini-3-flash-preview';
@@ -39,5 +39,6 @@ export const analyzeItem = async (imageB64: string, textDescription: string) => 
     }
   });
 
-  return JSON.parse(response.text || '{}');
+  // Use the .text property to access the response content.
+  return JSON.parse(response.text?.trim() || '{}');
 };

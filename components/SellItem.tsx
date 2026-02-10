@@ -1,15 +1,15 @@
-
 import React, { useState, useRef } from 'react';
 import { analyzeItem } from '../services/geminiService';
-import { Item, ItemCategory, ItemCondition, DeliveryMethod } from '../types';
+import { Item, ItemCategory, ItemCondition, DeliveryMethod, User } from '../types';
 
 interface SellItemProps {
+  currentUser: User;
   onSuccess: (newItem: Partial<Item>) => void;
   onCancel: () => void;
 }
 
-const SellItem: React.FC<SellItemProps> = ({ onSuccess, onCancel }) => {
-  const [image, setImage] = useState<string | null>(null);
+const SellItem: React.FC<SellItemProps> = ({ currentUser, onSuccess, onCancel }) => {
+  const [images, setImages] = useState<string[]>([]);
   const [description, setDescription] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [donationPercent, setDonationPercent] = useState(50);
@@ -20,44 +20,64 @@ const SellItem: React.FC<SellItemProps> = ({ onSuccess, onCancel }) => {
     title: '',
     category: ItemCategory.ELECTRONICS,
     condition: ItemCondition.A,
-    price: 0
+    aiSuggestedPrice: 0,
+    userPrice: 0
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Fix: Added explicit File type to prevent 'unknown' type assignment error during image processing.
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+    const fileList = e.target.files;
+    if (!fileList) return;
+
+    const files = Array.from(fileList);
+    if (images.length + files.length > 5) {
+      alert("이미지는 최대 5장까지 업로드 가능합니다.");
+      return;
+    }
+
+    files.forEach((file: File) => {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImage(reader.result as string);
+        setImages(prev => [...prev, reader.result as string].slice(0, 5));
       };
       reader.readAsDataURL(file);
-    }
+    });
+  };
+
+  const removeImage = (index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleAnalyze = async () => {
-    if (!image) return;
+    if (images.length === 0) return;
     setIsAnalyzing(true);
     try {
-      const b64 = image.split(',')[1];
+      // Analyze the first image for pricing suggestions
+      const b64 = images[0].split(',')[1];
       const result = await analyzeItem(b64, description);
       
       setFormData({
         title: result.title || '',
         category: (result.category as ItemCategory) || ItemCategory.ELECTRONICS,
         condition: (result.condition as ItemCondition) || ItemCondition.A,
-        price: result.suggestedPrice || 0
+        aiSuggestedPrice: result.suggestedPrice || 0,
+        userPrice: result.suggestedPrice || 0
       });
     } catch (error) {
       console.error("AI 분석 실패", error);
+      alert("AI 분석 중 오류가 발생했습니다.");
     } finally {
       setIsAnalyzing(false);
     }
   };
 
   const handleSubmit = () => {
-    if (!formData.title || !image) return;
+    if (!formData.title || images.length === 0) {
+      alert("상품명과 최소 1장의 사진이 필요합니다.");
+      return;
+    }
     if (deliveryMethod === DeliveryMethod.DELIVERY && !originAddress.trim()) {
       alert("택배 배송 시 출발지 주소를 입력해주세요.");
       return;
@@ -66,75 +86,83 @@ const SellItem: React.FC<SellItemProps> = ({ onSuccess, onCancel }) => {
     onSuccess({
       title: formData.title,
       description: description,
-      price: formData.price,
+      price: formData.userPrice,
+      aiSuggestedPrice: formData.aiSuggestedPrice,
       category: formData.category,
       condition: formData.condition,
-      imageUrl: image,
+      imageUrls: images,
       donationPercent: donationPercent,
       deliveryMethod: deliveryMethod,
       originAddress: deliveryMethod === DeliveryMethod.DELIVERY ? originAddress : undefined,
-      seller: "나 (본인)",
-      team: "플랫폼 개발팀"
+      seller: currentUser.name,
+      team: currentUser.team
     });
   };
 
   return (
-    <div className="bg-white rounded-3xl p-6 shadow-2xl max-w-2xl mx-auto border border-gray-100 overflow-y-auto max-h-[90vh]">
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="text-2xl font-bold text-gray-800">물건 등록하기</h2>
-        <button onClick={onCancel} className="text-gray-400 hover:text-gray-600">
+    <div className="bg-white rounded-3xl p-6 shadow-2xl max-w-2xl w-full mx-auto border border-gray-100 overflow-y-auto max-h-[90vh]">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">새 상품 등록</h2>
+          <p className="text-sm text-gray-500 mt-1">등록자: <span className="font-bold text-teal-600">{currentUser.name}</span> ({currentUser.team})</p>
+        </div>
+        <button onClick={onCancel} className="text-gray-400 hover:text-gray-600 p-2">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
       </div>
 
       <div className="space-y-6">
-        <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-2xl p-4 bg-gray-50 hover:bg-teal-50 hover:border-teal-200 transition-all cursor-pointer" onClick={() => fileInputRef.current?.click()}>
-          {image ? (
-            <img src={image} alt="Preview" className="max-h-48 rounded-xl object-contain shadow-sm" />
-          ) : (
-            <div className="text-center py-8">
-              <div className="bg-teal-100 text-teal-600 p-4 rounded-full inline-block mb-3">
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+        {/* Multi-image Upload */}
+        <div>
+          <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">이미지 (최대 5장)</label>
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+            {images.map((img, idx) => (
+              <div key={idx} className="aspect-square relative rounded-xl overflow-hidden border border-gray-100 group">
+                <img src={img} className="w-full h-full object-cover" />
+                <button 
+                  onClick={() => removeImage(idx)}
+                  className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
               </div>
-              <p className="text-sm font-medium text-gray-500">물건 사진을 업로드해 주세요</p>
-            </div>
-          )}
-          <input type="file" ref={fileInputRef} onChange={handleImageChange} className="hidden" accept="image/*" />
+            ))}
+            {images.length < 5 && (
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                className="aspect-square flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-xl bg-gray-50 hover:bg-teal-50 hover:border-teal-200 transition-all"
+              >
+                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+                <span className="text-[10px] mt-1 text-gray-500">{images.length}/5</span>
+              </button>
+            )}
+          </div>
+          <input type="file" ref={fileInputRef} onChange={handleImageChange} className="hidden" accept="image/*" multiple />
         </div>
 
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">상세 설명 (선택)</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">상세 설명</label>
           <textarea 
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             className="w-full border border-gray-200 rounded-xl p-3 focus:ring-2 focus:ring-teal-500 focus:border-transparent outline-none transition-all"
-            placeholder="AI가 물건을 더 잘 분석할 수 있게 도와주세요..."
+            placeholder="상품에 대한 설명을 적어주세요..."
             rows={3}
           />
         </div>
 
         <button 
           onClick={handleAnalyze}
-          disabled={!image || isAnalyzing}
-          className="w-full bg-gradient-to-r from-teal-600 to-emerald-600 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-teal-200 transition-all disabled:opacity-50 disabled:shadow-none flex items-center justify-center gap-2"
+          disabled={images.length === 0 || isAnalyzing}
+          className="w-full bg-gradient-to-r from-teal-600 to-emerald-600 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-teal-200 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
         >
-          {isAnalyzing ? (
-            <>
-              <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              AI가 분석 중입니다...
-            </>
-          ) : (
-            "✨ AI 자동 분석"
-          )}
+          {isAnalyzing ? "AI 분석 중..." : "✨ AI 가격 분석 및 추천"}
         </button>
 
         {formData.title && (
           <div className="pt-4 border-t border-gray-100 space-y-4 animate-fadeIn">
             <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">상품명</label>
+              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">AI 추천 상품명</label>
               <input 
                 type="text" 
                 value={formData.title} 
@@ -166,19 +194,34 @@ const SellItem: React.FC<SellItemProps> = ({ onSuccess, onCancel }) => {
               </div>
             </div>
 
+            {/* Pricing Section */}
+            <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+              <div>
+                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">AI 추천 가격</label>
+                <p className="text-lg font-bold text-teal-600">₩ {formData.aiSuggestedPrice.toLocaleString()}</p>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">내 판매 희망가</label>
+                <input 
+                  type="number" 
+                  value={formData.userPrice} 
+                  onChange={e => setFormData({...formData, userPrice: parseInt(e.target.value) || 0})}
+                  className="w-full text-lg font-bold text-gray-900 bg-transparent border-b border-gray-300 focus:border-teal-500 outline-none" 
+                  placeholder="0"
+                />
+              </div>
+            </div>
+
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">배송 방법</label>
-                <div className="flex gap-2 mt-1">
+                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">배송 방법</label>
+                <div className="flex gap-2">
                   {Object.values(DeliveryMethod).map(method => (
                     <button
                       key={method}
-                      type="button"
                       onClick={() => setDeliveryMethod(method)}
-                      className={`flex-1 py-2 px-3 rounded-xl text-sm font-semibold border transition-all ${
-                        deliveryMethod === method 
-                        ? 'bg-teal-600 text-white border-teal-600 shadow-sm' 
-                        : 'bg-white text-gray-600 border-gray-200 hover:border-teal-200'
+                      className={`flex-1 py-2 rounded-xl text-xs font-bold border transition-all ${
+                        deliveryMethod === method ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-gray-500 border-gray-200'
                       }`}
                     >
                       {method}
@@ -189,31 +232,21 @@ const SellItem: React.FC<SellItemProps> = ({ onSuccess, onCancel }) => {
 
               {deliveryMethod === DeliveryMethod.DELIVERY && (
                 <div className="animate-fadeIn">
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">출발지 주소 (택배 보낼 곳)</label>
+                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1">출발지 주소</label>
                   <input 
                     type="text" 
                     value={originAddress} 
                     onChange={e => setOriginAddress(e.target.value)}
-                    placeholder="예: 서울시 강남구 OO타워 15층"
-                    className="w-full border-b border-gray-200 py-2 text-sm font-medium text-gray-800 focus:border-teal-500 outline-none transition-all" 
+                    placeholder="예: OO타워 3층 탕비실"
+                    className="w-full border-b border-gray-200 py-1 text-sm outline-none focus:border-teal-500" 
                   />
                 </div>
               )}
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">제안 판매가 (P)</label>
-              <input 
-                type="number" 
-                value={formData.price} 
-                onChange={e => setFormData({...formData, price: parseInt(e.target.value)})}
-                className="w-full text-2xl font-bold text-teal-600 outline-none" 
-              />
-            </div>
-
             <div className="bg-emerald-50 p-4 rounded-2xl border border-emerald-100">
                <label className="block text-sm font-bold text-emerald-800 mb-2 flex justify-between">
-                <span>기부 비율 설정</span>
+                <span>수익금 기부 비율</span>
                 <span className="text-emerald-600">{donationPercent}%</span>
                </label>
                <input 
@@ -223,18 +256,13 @@ const SellItem: React.FC<SellItemProps> = ({ onSuccess, onCancel }) => {
                  onChange={e => setDonationPercent(parseInt(e.target.value))}
                  className="w-full accent-emerald-500 h-2 bg-emerald-200 rounded-lg appearance-none cursor-pointer"
                />
-               <p className="text-[11px] text-emerald-600 mt-2 font-medium">
-                 {donationPercent === 100 
-                  ? "😇 대단해요! 100% 기부 시 '기부 천사' 배지가 부여됩니다." 
-                  : `판매 시 ₩ ${(formData.price * donationPercent / 100).toLocaleString()}이 선택한 자선 단체에 기부됩니다.`}
-               </p>
             </div>
 
             <button 
               onClick={handleSubmit}
-              className="w-full bg-gray-900 text-white font-bold py-4 rounded-2xl hover:bg-gray-800 transition-all mt-4"
+              className="w-full bg-gray-900 text-white font-bold py-4 rounded-2xl hover:bg-gray-800 transition-all shadow-xl"
             >
-              장터에 등록하기
+              상품 등록하기
             </button>
           </div>
         )}

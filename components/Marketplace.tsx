@@ -43,7 +43,7 @@ const Marketplace: React.FC<MarketplaceProps> = ({ items, onSelectItem }) => {
           >
             <div className="aspect-square relative overflow-hidden">
               <img 
-                src={item.imageUrl} 
+                src={item.imageUrls[0]} 
                 alt={item.title} 
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               />

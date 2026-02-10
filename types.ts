@@ -34,13 +34,14 @@ export interface Item {
   title: string;
   description: string;
   price: number;
+  aiSuggestedPrice?: number;
   category: ItemCategory;
   condition: ItemCondition;
   deliveryMethod: DeliveryMethod;
   originAddress?: string;
   seller: string;
   team: string;
-  imageUrl: string;
+  imageUrls: string[];
   donationPercent: number;
   isAuction?: boolean;
   currentBid?: number;
