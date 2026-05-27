@@ -197,3 +197,78 @@
   border-radius: 50%; animation: spin .7s linear infinite;
   margin: 0 auto 10px;
 }
+
+/* ── 집계기준 버튼 (헤더) ── */
+.groupBtn {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; color: #1a6ef5;
+  background: #e8f0fe; border: none; border-radius: 20px;
+  padding: 7px 13px; cursor: pointer; font-family: inherit;
+  white-space: nowrap; max-width: 140px; overflow: hidden; text-overflow: ellipsis;
+  transition: background .15s;
+}
+.groupBtn:active { background: #c7d9fd; }
+
+/* ── 집계기준 인포바 ── */
+.groupInfo {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px;
+  background: #fff; border-bottom: 1px solid rgba(0,0,0,0.07);
+}
+.groupInfoLbl { font-size: 11px; color: #9ea3b0; flex-shrink: 0; }
+.groupInfoVal {
+  font-size: 12px; font-weight: 700; color: #1a6ef5;
+  background: #e8f0fe; padding: 2px 9px; border-radius: 10px;
+}
+.groupInfoCount { font-size: 11px; color: #9ea3b0; margin-left: 2px; }
+.groupChangeBtn {
+  margin-left: auto; font-size: 11px; font-weight: 600; color: #1a6ef5;
+  background: none; border: 1px solid #c7d9fd; border-radius: 8px;
+  padding: 3px 10px; cursor: pointer; font-family: inherit;
+  transition: background .15s;
+}
+.groupChangeBtn:active { background: #e8f0fe; }
+
+/* ── 컬럼 선택 드로어 내부 ── */
+.colPickerDesc {
+  font-size: 12px; color: #5c6070; line-height: 1.65;
+  background: #f4f5f7; border-radius: 10px;
+  padding: 10px 12px; margin-bottom: 14px;
+}
+.colGroup { padding: 10px 0 4px; }
+.colGroupLbl {
+  font-size: 10px; font-weight: 700; color: #9ea3b0;
+  letter-spacing: .07em; text-transform: uppercase;
+}
+.colItem {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 13px; border-radius: 12px;
+  border: 1.5px solid rgba(0,0,0,0.08);
+  margin-bottom: 7px; cursor: pointer; background: #fff;
+  transition: border-color .15s, background .15s;
+}
+.colItem:active { background: #f4f5f7; }
+.colItemActive {
+  border-color: #1a6ef5;
+  background: #f0f5ff;
+}
+.colItemLeft { flex: 1; min-width: 0; }
+.colItemName {
+  font-size: 13px; font-weight: 600; color: #111318;
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+}
+.colItemSample {
+  font-size: 11px; color: #9ea3b0; margin-top: 3px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.colTag {
+  font-size: 10px; font-weight: 600; padding: 1px 7px;
+  border-radius: 8px; flex-shrink: 0;
+}
+.colItemRight {
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-left: 10px;
+}
+.colItemUniq {
+  font-size: 11px; font-weight: 600; color: #9ea3b0;
+  background: #f4f5f7; padding: 2px 8px; border-radius: 8px;
+}
