@@ -1,7 +1,0 @@
-{
-  "name": "DS플리마켓 - Corporate Warm Market",
-  "description": "An ESG-driven internal flea market platform where employees can trade items and donate proceeds to charity.",
-  "requestFramePermissions": [
-    "camera"
-  ]
-}
